@@ -86,12 +86,11 @@ class TextMarkov():
 
     def generate_text(self,
                       n_tokens: int = 30,
-                      start_token: Optional[Tuple[str]] = None) -> str:
+                      start: str = '') -> str:
         generated_tokens = islice(
-                self.generate_tokens(start_token=start_token),
+                self.generate_tokens(start=start),
                 n_tokens)
-        big_n_gram = flatten(generated_tokens)
-        return n_gram_to_string(big_n_gram)
+        return concatenate_grams(generated_tokens)
 
 
 def _tokenize(n_gram: int, unigram_regex: str, text: str) -> List[Tuple[str]]:
