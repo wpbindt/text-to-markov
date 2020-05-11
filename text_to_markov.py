@@ -116,6 +116,17 @@ def take_until_inclusive(predicate, iterator):
             break
 
 
+def concatenate_two_grams(gram1: str, gram2: str) -> str:
+    if re.match(PUNCTUATION, gram2[0]):
+        return gram1 + gram2
+    else:
+        return gram1 + ' ' + gram2
+
+
+def concatenate_grams(grams: Sequence[str]) -> str:
+    return list(accumulate(grams, concatenate_two_grams))[-1]
+
+
 def flatten(sequence_of_tuples):
     return sum(sequence_of_tuples, ())
 
