@@ -1,9 +1,10 @@
 from collections import Counter
-from itertools import islice
+from functools import partial
+from itertools import accumulate, islice
 import networkx as nx
 import random
 import re
-from typing import Generator, List, Optional, Tuple
+from typing import List, Optional, Sequence
 
 # add some attributes capturing statistics (avg degree in and out, etc)
 # maybe some visualization stuff, deal with terminal nodes
@@ -30,14 +31,14 @@ class TextMarkov():
         self.markov_chain = nx.DiGraph()
 
     def fit(self, text: str) -> nx.DiGraph:
-        tokens = _tokenize(self.n_grams, self.unigram_regex, text)
+        tokens = tokenize(self.n_grams, self.unigram_regex, text)
         token_edges = zip(tokens, tokens[self.n_grams:])
         self.tokens = set(tokens)
 
         # Put the multiset Counter(token_edges) in a form that
         # add_weighted_edges_from accepts.
-        edges_freqs = [(*edge, frequency)
-                       for edge, frequency in Counter(token_edges).items()]
+        edges_freqs = ((*edge, frequency)
+                       for edge, frequency in Counter(token_edges).items())
 
         self.markov_chain.add_nodes_from(self.tokens)
         self.markov_chain.add_weighted_edges_from(edges_freqs)
@@ -50,15 +51,15 @@ class TextMarkov():
 
         return self.markov_chain
 
-    def generate_tokens(self, start_token: Optional[Tuple[str]] = None):
+    def generate_tokens(self, start: str = ''):
         if not self.markov_chain:
             raise NotFittedError(f'This {type(self).__name__} instance has '
                                  'not been fitted yet. Try calling "fit" '
                                  'first.')
-        if start_token:
-            current_token = start_token
-        else:
-            current_token, = random.sample(self.tokens, 1)
+        filtered_tokens = {token
+                           for token in self.tokens
+                           if re.match('^' + start, token)}
+        current_token, = random.sample(filtered_tokens, 1)
 
         while True:
             yield current_token
@@ -74,39 +75,33 @@ class TextMarkov():
                 raise TerminalNodeError('Terminal node reached')
 
     def generate_sentence(self,
-                          start_token: Optional[Tuple[str]] = None,
-                          max_tokens: int = 100) -> str:
-        sentence_tokens = take_until_inclusive(
-                lambda tk: any(re.match(TERMINAL_PUNCTUATION, uni) for uni in tk),
-                self.generate_tokens(start_token=start_token))
-        big_n_gram = flatten(sentence_tokens)
-        output = n_gram_to_string(big_n_gram)
-        terminal_regex = fr'(?<={TERMINAL_PUNCTUATION})[\s\S]*$'
-        return re.sub(terminal_regex, '', output)
+                          start: str = '',
+                          max_tokens: Optional[int] = 100) -> str:
+        unbounded_sentence_tokens = take_until_inclusive(
+                partial(re.match, TERMINAL_PUNCTUATION),
+                self.generate_tokens(start=start))
+        sentence_tokens = islice(unbounded_sentence_tokens, max_tokens)
+        untrimmed_output = concatenate_grams(sentence_tokens)
+        terminal_regex = fr'(?<={TERMINAL_PUNCTUATION}).*$'
+        match = re.search(terminal_regex, untrimmed_output)
+        if match:
+            return untrimmed_output[:match.span()[0]]
+        else:
+            raise RunOnSentenceError
 
     def generate_text(self,
-                      n_tokens: int = 30,
-                      start_token: Optional[Tuple[str]] = None) -> str:
+                      start: str = '',
+                      n_tokens: int = 30) -> str:
         generated_tokens = islice(
-                self.generate_tokens(start_token=start_token),
+                self.generate_tokens(start=start),
                 n_tokens)
-        big_n_gram = flatten(generated_tokens)
-        return n_gram_to_string(big_n_gram)
+        return concatenate_grams(generated_tokens)
 
 
-def _tokenize(n_gram: int, unigram_regex: str, text: str) -> List[Tuple[str]]:
+def tokenize(n_gram: int, unigram_regex: str, text: str) -> List[str]:
     unigrams = re.findall(unigram_regex, text)
-    return list(zip(*[unigrams[i:] for i in range(n_gram)]))
-
-
-def n_gram_to_string(n_gram: str) -> str:
-    output = n_gram[0]
-    for unigram in n_gram[1:]:
-        if re.match(PUNCTUATION, unigram):
-            output = output + unigram
-        else:
-            output = output + ' ' + unigram
-    return output
+    return [concatenate_grams(tuple_gram)
+            for tuple_gram in zip(*(unigrams[i:] for i in range(n_gram)))]
 
 
 def take_until_inclusive(predicate, iterator):
@@ -116,8 +111,15 @@ def take_until_inclusive(predicate, iterator):
             break
 
 
-def flatten(sequence_of_tuples):
-    return sum(sequence_of_tuples, ())
+def concatenate_two_grams(gram1: str, gram2: str) -> str:
+    if re.match(PUNCTUATION, gram2[0]):
+        return gram1 + gram2
+    else:
+        return gram1 + ' ' + gram2
+
+
+def concatenate_grams(grams: Sequence[str]) -> str:
+    return list(accumulate(grams, concatenate_two_grams))[-1]
 
 
 class NotFittedError(Exception):
@@ -125,4 +127,8 @@ class NotFittedError(Exception):
 
 
 class TerminalNodeError(Exception):
+    pass
+
+
+class RunOnSentenceError(Exception):
     pass
