@@ -1,4 +1,5 @@
 from collections import Counter
+from functools import partial
 from itertools import accumulate, islice
 import networkx as nx
 import random
@@ -74,15 +75,14 @@ class TextMarkov():
                 raise TerminalNodeError('Terminal node reached')
 
     def generate_sentence(self,
-                          start_token: Optional[Tuple[str]] = None,
+                          start: str = '',
                           max_tokens: int = 100) -> str:
         sentence_tokens = take_until_inclusive(
-                lambda tk: any(re.match(TERMINAL_PUNCTUATION, uni) for uni in tk),
-                self.generate_tokens(start_token=start_token))
-        big_n_gram = flatten(sentence_tokens)
-        output = n_gram_to_string(big_n_gram)
+                partial(re.match, TERMINAL_PUNCTUATION),
+                self.generate_tokens(start=start))
+        untrimmed_output = concatenate_grams(sentence_tokens)
         terminal_regex = fr'(?<={TERMINAL_PUNCTUATION})[\s\S]*$'
-        return re.sub(terminal_regex, '', output)
+        return re.sub(terminal_regex, '', untrimmed_output)
 
     def generate_text(self,
                       n_tokens: int = 30,
