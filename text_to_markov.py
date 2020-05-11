@@ -3,7 +3,7 @@ from itertools import accumulate, islice
 import networkx as nx
 import random
 import re
-from typing import Generator, List, Optional, Sequence, Tuple
+from typing import List, Optional, Sequence, Tuple
 
 # add some attributes capturing statistics (avg degree in and out, etc)
 # maybe some visualization stuff, deal with terminal nodes
@@ -55,6 +55,9 @@ class TextMarkov():
             raise NotFittedError(f'This {type(self).__name__} instance has '
                                  'not been fitted yet. Try calling "fit" '
                                  'first.')
+        # Idea when working with stringy n-grams: replace this if else
+        # block by a set comprehension involving a re.match, and a
+        # random.sample
         if start_token:
             current_token = start_token
         else:
@@ -96,7 +99,8 @@ class TextMarkov():
 
 def _tokenize(n_gram: int, unigram_regex: str, text: str) -> List[Tuple[str]]:
     unigrams = re.findall(unigram_regex, text)
-    return list(zip(*[unigrams[i:] for i in range(n_gram)]))
+    return [concatenate_grams(tuple_gram) 
+            for tuple_gram in zip(*(unigrams[i:] for i in range(n_gram)))]
 
 
 def n_gram_to_string(n_gram: str) -> str:
