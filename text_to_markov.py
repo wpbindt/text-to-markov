@@ -1,5 +1,5 @@
 from collections import Counter
-from itertools import islice
+from itertools import accumulate, islice
 import networkx as nx
 import random
 import re
