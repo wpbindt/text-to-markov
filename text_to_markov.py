@@ -4,7 +4,7 @@ from itertools import accumulate, islice
 import networkx as nx
 import random
 import re
-from typing import List, Optional, Sequence, Tuple
+from typing import List, Sequence
 
 # add some attributes capturing statistics (avg degree in and out, etc)
 # maybe some visualization stuff, deal with terminal nodes
@@ -85,28 +85,18 @@ class TextMarkov():
         return re.sub(terminal_regex, '', untrimmed_output)
 
     def generate_text(self,
-                      n_tokens: int = 30,
-                      start: str = '') -> str:
+                      start: str = '',
+                      n_tokens: int = 30) -> str:
         generated_tokens = islice(
                 self.generate_tokens(start=start),
                 n_tokens)
         return concatenate_grams(generated_tokens)
 
 
-def _tokenize(n_gram: int, unigram_regex: str, text: str) -> List[Tuple[str]]:
+def _tokenize(n_gram: int, unigram_regex: str, text: str) -> List[str]:
     unigrams = re.findall(unigram_regex, text)
-    return [concatenate_grams(tuple_gram) 
+    return [concatenate_grams(tuple_gram)
             for tuple_gram in zip(*(unigrams[i:] for i in range(n_gram)))]
-
-
-def n_gram_to_string(n_gram: str) -> str:
-    output = n_gram[0]
-    for unigram in n_gram[1:]:
-        if re.match(PUNCTUATION, unigram):
-            output = output + unigram
-        else:
-            output = output + ' ' + unigram
-    return output
 
 
 def take_until_inclusive(predicate, iterator):
@@ -125,10 +115,6 @@ def concatenate_two_grams(gram1: str, gram2: str) -> str:
 
 def concatenate_grams(grams: Sequence[str]) -> str:
     return list(accumulate(grams, concatenate_two_grams))[-1]
-
-
-def flatten(sequence_of_tuples):
-    return sum(sequence_of_tuples, ())
 
 
 class NotFittedError(Exception):
