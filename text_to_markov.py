@@ -31,7 +31,7 @@ class TextMarkov():
         self.markov_chain = nx.DiGraph()
 
     def fit(self, text: str) -> nx.DiGraph:
-        tokens = _tokenize(self.n_grams, self.unigram_regex, text)
+        tokens = tokenize(self.n_grams, self.unigram_regex, text)
         token_edges = zip(tokens, tokens[self.n_grams:])
         self.tokens = set(tokens)
 
@@ -93,7 +93,7 @@ class TextMarkov():
         return concatenate_grams(generated_tokens)
 
 
-def _tokenize(n_gram: int, unigram_regex: str, text: str) -> List[str]:
+def tokenize(n_gram: int, unigram_regex: str, text: str) -> List[str]:
     unigrams = re.findall(unigram_regex, text)
     return [concatenate_grams(tuple_gram)
             for tuple_gram in zip(*(unigrams[i:] for i in range(n_gram)))]
