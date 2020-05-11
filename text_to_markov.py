@@ -4,7 +4,7 @@ from itertools import accumulate, islice
 import networkx as nx
 import random
 import re
-from typing import List, Sequence
+from typing import List, Optional, Sequence
 
 # add some attributes capturing statistics (avg degree in and out, etc)
 # maybe some visualization stuff, deal with terminal nodes
@@ -76,13 +76,18 @@ class TextMarkov():
 
     def generate_sentence(self,
                           start: str = '',
-                          max_tokens: int = 100) -> str:
-        sentence_tokens = take_until_inclusive(
+                          max_tokens: Optional[int] = 100) -> str:
+        unbounded_sentence_tokens = take_until_inclusive(
                 partial(re.match, TERMINAL_PUNCTUATION),
                 self.generate_tokens(start=start))
+        sentence_tokens = islice(unbounded_sentence_tokens, max_tokens)
         untrimmed_output = concatenate_grams(sentence_tokens)
-        terminal_regex = fr'(?<={TERMINAL_PUNCTUATION})[\s\S]*$'
-        return re.sub(terminal_regex, '', untrimmed_output)
+        terminal_regex = fr'(?<={TERMINAL_PUNCTUATION}).*$'
+        match = re.search(terminal_regex, untrimmed_output)
+        if match:
+            return untrimmed_output[:match.span()[0]]
+        else:
+            raise RunOnSentenceError
 
     def generate_text(self,
                       start: str = '',
@@ -122,4 +127,8 @@ class NotFittedError(Exception):
 
 
 class TerminalNodeError(Exception):
+    pass
+
+
+class RunOnSentenceError(Exception):
     pass
