@@ -40,8 +40,10 @@ class TextMarkov():
     Attributes
     ----------
     markov_chain: networkx.Digraph
-        The underlying Markov chain of the model. The transition
-        probabilities are stored in the weights of the edges.
+        The underlying Markov chain of the model. The nodes are the
+        tokens occuring in the text on which the Markov chain is based
+        The transition probabilities are stored in the weights of the 
+        edges.
 
     tokens: Set[str]
         The set of tokens of the Markov chain.
