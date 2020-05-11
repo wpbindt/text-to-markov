@@ -50,18 +50,15 @@ class TextMarkov():
 
         return self.markov_chain
 
-    def generate_tokens(self, start_token: Optional[Tuple[str]] = None):
+    def generate_tokens(self, start: str = ''):
         if not self.markov_chain:
             raise NotFittedError(f'This {type(self).__name__} instance has '
                                  'not been fitted yet. Try calling "fit" '
                                  'first.')
-        # Idea when working with stringy n-grams: replace this if else
-        # block by a set comprehension involving a re.match, and a
-        # random.sample
-        if start_token:
-            current_token = start_token
-        else:
-            current_token, = random.sample(self.tokens, 1)
+        filtered_tokens = {token 
+                           for token in self.tokens 
+                           if re.match('^' + start, token)}
+        current_token, = random.sample(filtered_tokens, 1)
 
         while True:
             yield current_token
