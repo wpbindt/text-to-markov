@@ -3,7 +3,7 @@ from itertools import accumulate, islice
 import networkx as nx
 import random
 import re
-from typing import Generator, List, Optional, Tuple
+from typing import Generator, List, Optional, Sequence, Tuple
 
 # add some attributes capturing statistics (avg degree in and out, etc)
 # maybe some visualization stuff, deal with terminal nodes
