@@ -37,8 +37,8 @@ class TextMarkov():
 
         # Put the multiset Counter(token_edges) in a form that
         # add_weighted_edges_from accepts.
-        edges_freqs = [(*edge, frequency)
-                       for edge, frequency in Counter(token_edges).items()]
+        edges_freqs = ((*edge, frequency)
+                       for edge, frequency in Counter(token_edges).items())
 
         self.markov_chain.add_nodes_from(self.tokens)
         self.markov_chain.add_weighted_edges_from(edges_freqs)
@@ -56,8 +56,8 @@ class TextMarkov():
             raise NotFittedError(f'This {type(self).__name__} instance has '
                                  'not been fitted yet. Try calling "fit" '
                                  'first.')
-        filtered_tokens = {token 
-                           for token in self.tokens 
+        filtered_tokens = {token
+                           for token in self.tokens
                            if re.match('^' + start, token)}
         current_token, = random.sample(filtered_tokens, 1)
 
