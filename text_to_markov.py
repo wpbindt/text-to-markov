@@ -4,7 +4,7 @@ from itertools import accumulate, islice
 import networkx as nx
 import random
 import re
-from typing import List, Optional, Sequence
+from typing import Generator, Iterator, List, Optional, Sequence, TypeVar
 
 PUNCTUATION = '[.!?,:;]'
 TERMINAL_PUNCTUATION = '[.!?]'
@@ -36,13 +36,13 @@ class TextMarkov():
 
     tokenize_punctuation: bool, default=True
         If True, punctuation marks will be treated as unigrams.
-        
+
     Attributes
     ----------
     markov_chain: networkx.Digraph
         The underlying Markov chain of the model. The nodes are the
         tokens occuring in the text on which the Markov chain is based
-        The transition probabilities are stored in the weights of the 
+        The transition probabilities are stored in the weights of the
         edges.
 
     tokens: Set[str]
@@ -62,7 +62,7 @@ class TextMarkov():
     def fit(self, text: str) -> nx.DiGraph:
         """
         Fit the Markov chain.
-        
+
         Parameters
         ----------
         text : str
@@ -92,9 +92,9 @@ class TextMarkov():
 
         return self.markov_chain
 
-    def generate_tokens(self, start: str = ''):
+    def generate_tokens(self, start: str = '') -> Generator[str, None, None]:
         """
-        Make an iterator that returns the nodes in a traversal of the
+        Make a generator that returns the nodes in a traversal of the
         Markov chain.
 
         Parameters
@@ -174,10 +174,10 @@ class TextMarkov():
         Parameters
         ----------
         start : str, default=''
-            Text that the generated text should start with. If empty, 
-            the generated text will start at a random node of the 
+            Text that the generated text should start with. If empty,
+            the generated text will start at a random node of the
             Markov chain.
-        
+
         n_tokens : int, default=30
             Number of tokens in the generated text.
 
@@ -193,7 +193,7 @@ class TextMarkov():
 
 
 def tokenize(n_gram: int, unigram_regex: str, text: str) -> List[str]:
-    """
+    r"""
     Tokenize a given text.
 
     Parameters
@@ -211,13 +211,19 @@ def tokenize(n_gram: int, unigram_regex: str, text: str) -> List[str]:
     -------
     List of strings
         List of tokens in the text.
+
+    >>> tokenize(2, r'\b\w+\b', 'please, tokenize me')
+    ['please, ', ', tokenize', 'tokenize me']
     """
     unigrams = re.findall(unigram_regex, text)
     return [concatenate_grams(tuple_gram)
             for tuple_gram in zip(*(unigrams[i:] for i in range(n_gram)))]
 
 
-def take_until_inclusive(predicate, iterator):
+T = TypeVar('T')
+
+
+def take_until_inclusive(predicate: T, iterator: Iterator[T]) -> Iterator[T]:
     """
     Return an iterator up to and including when a given predicate fails.
     Similar to itertools.takewhile.
