@@ -6,19 +6,48 @@ import random
 import re
 from typing import List, Optional, Sequence
 
-# add some attributes capturing statistics (avg degree in and out, etc)
-# maybe some visualization stuff, deal with terminal nodes
-# maybe add warm starts
-# ellipses?
-
-# NB: there are terminal nodes: this is not a Markov chain.
-# Maybe implement something like <END> nodes.
-
 PUNCTUATION = '[.!?,:;]'
 TERMINAL_PUNCTUATION = '[.!?]'
 
 
 class TextMarkov():
+    '''
+    Markov text generator.
+
+    TextMarkov takes a string, and creates a Markov chain whose nodes
+    are the tokens (for example words, or pairs of consecutive words)
+    in this string, and in which the transition probability to go from
+    one token to another is the probability with which this occurs in
+    the given string. The usage is similar to the sklearn API. That
+    is, the model should first be fitted using a call to the "fit"
+    method, and then it can be used as a Markov text generator by
+    calling the "generate_text" and "generate_sentence" methods.
+
+    Parameters
+    ----------
+    n_grams: int, default=1
+        Number of unigrams that a single token consists of. If set to
+        1, a token will just be a single word or punctuation mark.
+
+    unigram_regex: str
+        Regular expression encoding what constitutes a non-punctuation
+        unigram. The default selects one or more alphanumeric
+        characters or apostrophes.
+
+    tokenize_punctuation: bool, default=True
+        If True, punctuation marks will be treated as unigrams.
+        
+    Attributes
+    ----------
+    markov_chain: networkx.Digraph
+        The underlying Markov chain of the model. The nodes are the
+        tokens occuring in the text on which the Markov chain is based
+        The transition probabilities are stored in the weights of the 
+        edges.
+
+    tokens: Set[str]
+        The set of tokens of the Markov chain.
+    '''
     def __init__(self,
                  n_grams: int = 1,
                  unigram_regex: str = r"(?u)[\w']+",
@@ -31,6 +60,18 @@ class TextMarkov():
         self.markov_chain = nx.DiGraph()
 
     def fit(self, text: str) -> nx.DiGraph:
+        """
+        Fit the Markov chain.
+        
+        Parameters
+        ----------
+        text : str
+            The text on which to fit the Markov chain.
+
+        Returns
+        -------
+        self : returns an instance of self
+        """
         tokens = tokenize(self.n_grams, self.unigram_regex, text)
         token_edges = zip(tokens, tokens[self.n_grams:])
         self.tokens = set(tokens)
@@ -52,10 +93,25 @@ class TextMarkov():
         return self.markov_chain
 
     def generate_tokens(self, start: str = ''):
+        """
+        Make an iterator that returns the nodes in a traversal of the
+        Markov chain.
+
+        Parameters
+        ----------
+        start : str, default=''
+            Text that the first node in the traversal should start
+            with. If empty, the first node will be chosen randomly.
+
+        Returns
+        -------
+        iterator iterating over strings
+        """
         if not self.markov_chain:
             raise NotFittedError(f'This {type(self).__name__} instance has '
                                  'not been fitted yet. Try calling "fit" '
                                  'first.')
+
         filtered_tokens = {token
                            for token in self.tokens
                            if re.match('^' + start, token)}
@@ -77,6 +133,26 @@ class TextMarkov():
     def generate_sentence(self,
                           start: str = '',
                           max_tokens: Optional[int] = 100) -> str:
+        """
+        Generate a single sentence traversing the Markov chain.
+
+        Parameters
+        ----------
+        start : str, default=''
+            Text that the sentence should start with. If empty, the sentence
+            will start at a random token of the text.
+
+        max_tokens : int or nonetype, default=100
+            The maximum number of tokens to search before giving up.
+            If the number of tokens is exceeded, raise a RunOnSentence
+            error. If set to None, keep searching until a terminal
+            punctuation mark is found. This could blow up the stack.
+
+        Returns
+        -------
+        str
+            Returns the generated sentence.
+        """
         unbounded_sentence_tokens = take_until_inclusive(
                 partial(re.match, TERMINAL_PUNCTUATION),
                 self.generate_tokens(start=start))
@@ -92,6 +168,24 @@ class TextMarkov():
     def generate_text(self,
                       start: str = '',
                       n_tokens: int = 30) -> str:
+        """
+        Generates some text by traversing the Markov chain.
+
+        Parameters
+        ----------
+        start : str, default=''
+            Text that the generated text should start with. If empty, 
+            the generated text will start at a random node of the 
+            Markov chain.
+        
+        n_tokens : int, default=30
+            Number of tokens in the generated text.
+
+        Returns
+        -------
+        str
+            Returns the generated text.
+        """
         generated_tokens = islice(
                 self.generate_tokens(start=start),
                 n_tokens)
@@ -99,12 +193,42 @@ class TextMarkov():
 
 
 def tokenize(n_gram: int, unigram_regex: str, text: str) -> List[str]:
+    """
+    Tokenize a given text.
+
+    Parameters
+    ----------
+    n_gram : int
+        The number of unigrams that a token consists of.
+
+    unigram_regex : int
+        Regular expression encoding what constitutes a unigram.
+
+    text : str
+        The text to tokenize.
+
+    Returns
+    -------
+    List of strings
+        List of tokens in the text.
+    """
     unigrams = re.findall(unigram_regex, text)
     return [concatenate_grams(tuple_gram)
             for tuple_gram in zip(*(unigrams[i:] for i in range(n_gram)))]
 
 
 def take_until_inclusive(predicate, iterator):
+    """
+    Return an iterator up to and including when a given predicate fails.
+    Similar to itertools.takewhile.
+
+    Example
+    -------
+    >>> x = [1, 2, 3, 4, 5, 6, 7, 4]
+    >>> it = take_until_inclusive(lambda x: x + 1 == 5, x)
+    >>> [y for y in it]
+    [1, 2, 3, 4]
+    """
     for x in iterator:
         yield x
         if predicate(x):
