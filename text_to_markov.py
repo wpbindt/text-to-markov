@@ -10,7 +10,7 @@ PUNCTUATION = '[.!?,:;]'
 TERMINAL_PUNCTUATION = '[.!?]'
 
 
-class TextMarkov():
+class TextMarkov:
     '''
     Markov text generator.
 
@@ -114,7 +114,7 @@ class TextMarkov():
 
         filtered_tokens = {token
                            for token in self.tokens
-                           if re.match('^' + start, token)}
+                           if re.match('^' + start, str(token))}
         current_token, = random.sample(filtered_tokens, 1)
 
         while True:
@@ -128,7 +128,7 @@ class TextMarkov():
                                  for datum in data]
                 current_token, = random.choices(next_tokens, weights=probabilities)
             else:
-                yield '<END OF STRING REACHED>'
+                yield NGram(('<END OF STRING REACHED>',))
                 return
 
     def generate_sentence(self,
@@ -155,7 +155,7 @@ class TextMarkov():
             Returns the generated sentence.
         """
         unbounded_sentence_tokens = take_until_inclusive(
-                partial(re.match, TERMINAL_PUNCTUATION),
+                lambda x: re.match(TERMINAL_PUNCTUATION, str(x)),
                 self.generate_tokens(start=start))
         sentence_tokens = islice(unbounded_sentence_tokens, max_tokens)
         untrimmed_output = concatenate_grams(sentence_tokens)
@@ -193,7 +193,7 @@ class TextMarkov():
         return concatenate_grams(generated_tokens)
 
 
-def tokenize(n_gram: int, unigram_regex: str, text: str) -> List[str]:
+def tokenize(n_gram: int, unigram_regex: str, text: str) -> List['NGram']:
     r"""
     Tokenize a given text.
 
@@ -217,14 +217,28 @@ def tokenize(n_gram: int, unigram_regex: str, text: str) -> List[str]:
     ['please, ', ', tokenize', 'tokenize me']
     """
     unigrams = re.findall(unigram_regex, text)
-    return [concatenate_grams(tuple_gram)
+    return [NGram(tuple_gram)
             for tuple_gram in zip(*(unigrams[i:] for i in range(n_gram)))]
+
+
+class NGram(tuple):
+    def __str__(self):
+        return list(accumulate(self, concatenate_two_unigrams))[-1]
+
+    def __add__(self, other):
+        return NGram(super().__add__(other))
+
+    def __radd__(self, other):
+        if other == 0:
+            return self
+        else:
+            return self.__add__(other)
 
 
 T = TypeVar('T')
 
 
-def take_until_inclusive(predicate: Callable[T, bool],
+def take_until_inclusive(predicate: Callable[[T], bool],
                          iterator: Iterator[T]) -> Iterator[T]:
     """
     Return an iterator up to and including when a given predicate fails.
@@ -243,15 +257,15 @@ def take_until_inclusive(predicate: Callable[T, bool],
             break
 
 
-def concatenate_two_grams(gram1: str, gram2: str) -> str:
+def concatenate_two_unigrams(gram1: str, gram2: str) -> str:
     if re.match(PUNCTUATION, gram2[0]):
         return gram1 + gram2
     else:
         return gram1 + ' ' + gram2
 
 
-def concatenate_grams(grams: Sequence[str]) -> str:
-    return list(accumulate(grams, concatenate_two_grams))[-1]
+def concatenate_grams(grams: Sequence[NGram]) -> str:
+    return str(sum(grams))
 
 
 class NotFittedError(Exception):
