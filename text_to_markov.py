@@ -213,8 +213,8 @@ def tokenize(n_gram: int, unigram_regex: str, text: str) -> List[str]:
     List of strings
         List of tokens in the text.
 
-    >>> tokenize(2, r'\b\w+\b', 'please, tokenize me')
-    ['please, ', ', tokenize', 'tokenize me']
+    >>> tokenize(2, r'\b\w+\b|,', 'please, tokenize me')
+    ['please,', tokenize', 'tokenize me']
     """
     unigrams = re.findall(unigram_regex, text)
     return [concatenate_grams(tuple_gram)
