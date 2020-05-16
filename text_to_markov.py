@@ -90,7 +90,7 @@ class TextMarkov():
         for n_gram, _, labels in self.markov_chain.edges(data=True):
             labels['weight'] = labels['weight'] / total_freqs[n_gram]
 
-        return self.markov_chain
+        return self
 
     def generate_tokens(self, start: str = '') -> Generator[str, None, None]:
         """
@@ -128,7 +128,7 @@ class TextMarkov():
                                  for datum in data]
                 current_token, = random.choices(next_tokens, weights=probabilities)
             else:
-                raise TerminalNodeError('Terminal node reached')
+                return '<END>'
 
     def generate_sentence(self,
                           start: str = '',
@@ -256,7 +256,7 @@ class NotFittedError(Exception):
     pass
 
 
-class TerminalNodeError(Exception):
+class TerminalNode(Exception):
     pass
 
 
