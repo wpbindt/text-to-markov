@@ -128,7 +128,8 @@ class TextMarkov():
                                  for datum in data]
                 current_token, = random.choices(next_tokens, weights=probabilities)
             else:
-                return '<END>'
+                yield '<END OF STRING REACHED>'
+                return
 
     def generate_sentence(self,
                           start: str = '',
@@ -253,10 +254,6 @@ def concatenate_grams(grams: Sequence[str]) -> str:
 
 
 class NotFittedError(Exception):
-    pass
-
-
-class TerminalNode(Exception):
     pass
 
 
