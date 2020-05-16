@@ -4,7 +4,7 @@ from itertools import accumulate, islice
 import networkx as nx
 import random
 import re
-from typing import Generator, Iterator, List, Optional, Sequence, TypeVar
+from typing import Callable, Generator, Iterator, List, Optional, Sequence, TypeVar
 
 PUNCTUATION = '[.!?,:;]'
 TERMINAL_PUNCTUATION = '[.!?]'
@@ -224,7 +224,8 @@ def tokenize(n_gram: int, unigram_regex: str, text: str) -> List[str]:
 T = TypeVar('T')
 
 
-def take_until_inclusive(predicate: T, iterator: Iterator[T]) -> Iterator[T]:
+def take_until_inclusive(predicate: Callable[T, bool],
+                         iterator: Iterator[T]) -> Iterator[T]:
     """
     Return an iterator up to and including when a given predicate fails.
     Similar to itertools.takewhile.
