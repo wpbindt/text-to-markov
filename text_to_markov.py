@@ -51,8 +51,10 @@ class TextMarkov:
     def __init__(self,
                  n_grams: int = 1,
                  unigram_regex: str = r"(?u)[\w']+",
-                 tokenize_punctuation: bool = True) -> None:
+                 tokenize_punctuation: bool = True,
+                 overlap: bool = False) -> None:
         self.n_grams = n_grams
+        self.overlap = overlap
         if tokenize_punctuation:
             self.unigram_regex = unigram_regex + '|' + PUNCTUATION
         else:
@@ -73,7 +75,10 @@ class TextMarkov:
         self : returns an instance of self
         """
         tokens = tokenize(self.n_grams, self.unigram_regex, text)
-        token_edges = zip(tokens, tokens[self.n_grams:])
+        if self.overlap:
+            token_edges = zip(tokens, tokens[1:])
+        else:
+            token_edges = zip(tokens, tokens[self.n_grams:])
         self.tokens = set(tokens)
 
         # Put the multiset Counter(token_edges) in a form that
@@ -158,7 +163,10 @@ class TextMarkov:
                 lambda x: re.match(TERMINAL_PUNCTUATION, str(x)),
                 self.generate_tokens(start=start))
         sentence_tokens = islice(unbounded_sentence_tokens, max_tokens)
-        untrimmed_output = concatenate_grams(sentence_tokens)
+        if self.overlap:
+            untrimmed_output = concatenate_overlapping_grams(sentence_tokens)
+        else:
+            untrimmed_output = concatenate_grams(sentence_tokens)
         terminal_regex = fr'(?<={TERMINAL_PUNCTUATION}).*$'
         match = re.search(terminal_regex, untrimmed_output)
         if match:
@@ -190,7 +198,10 @@ class TextMarkov:
         generated_tokens = islice(
                 self.generate_tokens(start=start),
                 n_tokens)
-        return concatenate_grams(generated_tokens)
+        if self.overlap:
+            return concatenate_overlapping_grams(generated_tokens)
+        else:
+            return concatenate_grams(generated_tokens)
 
 
 def tokenize(n_gram: int, unigram_regex: str, text: str) -> List['NGram']:
@@ -234,6 +245,9 @@ class NGram(tuple):
         else:
             return self.__add__(other)
 
+    def last(self):
+        return NGram([self[-1]])
+
 
 T = TypeVar('T')
 
@@ -266,6 +280,11 @@ def concatenate_two_unigrams(gram1: str, gram2: str) -> str:
 
 def concatenate_grams(grams: Sequence[NGram]) -> str:
     return str(sum(grams))
+
+
+def concatenate_overlapping_grams(grams: Sequence[NGram]) -> str:
+    non_overlapping_grams = [next(grams)] + [gram.last() for gram in grams]
+    return concatenate_grams(non_overlapping_grams)
 
 
 class NotFittedError(Exception):
