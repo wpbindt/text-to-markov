@@ -1,5 +1,4 @@
 from collections import Counter
-from functools import partial
 from itertools import accumulate, islice
 import networkx as nx
 import random
